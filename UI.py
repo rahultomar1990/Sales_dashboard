@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 import os
-import sys
 
 # --- 1. PAGE SETUP & BRANDING ---
 st.set_page_config(layout="wide", page_title="Bikano Sales Intelligence", page_icon="📈")
@@ -101,7 +101,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. CONFIGURATION ---
-# Using the new SUPPORTED Instant model ID
+# Using the Fast Instant Model to prevent Rate Limits
 GROQ_API_KEY = "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"
 CACHE_FILE = "sales_data_cache.parquet"
 
@@ -138,48 +138,29 @@ if isinstance(data_result, str):
 else:
     df = data_result
 
-# --- 5. CORE AI ENGINE (Direct Execution) ---
-def ask_ai(prompt, df):
-    """
-    Uses the supported Llama-3.1-8b-Instant model to generate code.
-    Executes it directly to avoid agent loops.
-    """
+# --- 5. CHART ENGINE ---
+def generate_chart(prompt, df):
     try:
-        # UPDATED: Using 'llama-3.1-8b-instant' which is the current supported ID
-        llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
-        
+        # Using Instant model for charts too - it's very fast
+        chart_llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
         code_prompt = f"""
-        You are a Python Data Analyst. 
-        DataFrame `df` has columns: {df.columns.tolist()}.
-        User Question: "{prompt}"
-        
+        You are a Python Data Visualization Expert using Plotly Express.
+        The user wants a visual based on this dataframe: {df.columns.tolist()}
+        User Query: "{prompt}"
         INSTRUCTIONS:
-        1. Write PYTHON CODE to calculate the answer.
-        2. Assign the final answer (string, number, or markdown table) to a variable named `result`.
-        3. If the user asks for a plot/chart/graph, create a Plotly Express figure named `fig`.
-        4. Wrap code in ```python blocks.
-        5. DO NOT print anything. Just assign `result` or `fig`.
-        6. IMPORT plotly.express as px inside the code if needed.
-        
-        Example:
-        ```python
-        import plotly.express as px
-        result = "Sales for 2024 is " + str(df[df['Year']==2024]['Sales'].sum())
-        fig = px.bar(df, x='Month', y='Sales')
-        ```
+        1. INTELLIGENTLY CHOOSE CHART TYPE.
+        2. STYLE: 
+           - **CRITICAL**: Use `template='plotly_dark'`.
+           - Colors: Use bright vivid colors that pop on dark background.
+        3. OUTPUT: Write ONLY the raw Python code for figure named 'fig'. Use 'df'.
         """
-        
-        response = llm.invoke(code_prompt)
+        response = chart_llm.invoke(code_prompt)
         cleaned_code = response.content.replace("```python", "").replace("```", "").strip()
-        
-        # Execute Code safely
-        local_vars = {"df": df, "px": px, "result": "I couldn't calculate that.", "fig": None}
+        local_vars = {"df": df, "px": px}
         exec(cleaned_code, globals(), local_vars)
-        
-        return local_vars.get('result', "No result found."), local_vars.get('fig', None)
-        
-    except Exception as e:
-        return f"Error: {str(e)}", None
+        return local_vars.get('fig', None)
+    except Exception:
+        return None
 
 # --- 6. CALCULATIONS ---
 min_year = int(df['Year'].min()) if 'Year' in df.columns else 2020
@@ -263,9 +244,30 @@ with col_chat:
     if qa_c3.button("📉 Low Growth", use_container_width=True):
         prompt_to_run = f"Which 5 products have the lowest Sales in {current_year}? Show in a table."
 
-    # CHAT HISTORY
+    # --- RESTORED: ROBUST AGENT ARCHITECTURE (But with Fast Model) ---
     if "messages" not in st.session_state: st.session_state.messages = []
     
+    if "agent" not in st.session_state:
+        # Using llama-3.1-8b-instant to AVOID Rate Limits, but keeping the AGENT for robustness
+        llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
+        prefix = f"""You are an expert Data Analyst. 
+        - The dataframe 'df' is already loaded.
+        - Dataset years: {min_year} to {max_year}. 'CY'={current_year}. 
+        - If I ask for a chart, just provide the data in a table and say "Chart generated below".
+        - Always provide Final Answer as a Markdown Table.
+        """
+        # This function handles the Python execution loop safely (Prevents Syntax Errors)
+        st.session_state.agent = create_pandas_dataframe_agent(
+            llm, 
+            df, 
+            verbose=True, 
+            allow_dangerous_code=True, 
+            handle_parsing_errors=True, 
+            max_iterations=10, 
+            prefix=prefix
+        )
+
+    # CHAT HISTORY
     chat_container = st.container(height=580)
     with chat_container:
         if not st.session_state.messages:
@@ -292,15 +294,33 @@ with col_chat:
                 st.markdown(final_prompt)
             
             with st.chat_message("assistant"):
-                with st.spinner("Calculating..."):
-                    # CALL THE NEW DIRECT ENGINE
-                    text_resp, fig = ask_ai(final_prompt, df)
-
-                    # Display Response
-                    if fig:
-                        st.session_state.messages.append({"role": "assistant", "content": {"text": str(text_resp), "chart": fig}})
+                with st.spinner("Analyzing..."):
+                    text_resp = ""
+                    try:
+                        # Add formatting instructions
+                        style = "\nIMPORTANT: Format numbers with commas. Use Markdown Tables. Start response with 'Final Answer:'."
+                        
+                        # INVOKE THE AGENT (Robust Way)
+                        resp = st.session_state.agent.invoke(final_prompt + style)
+                        text_resp = resp['output']
                         st.markdown(text_resp)
+                        
+                    except Exception as e:
+                        if "429" in str(e):
+                            text_resp = "⚠️ High Traffic (Rate Limit). Please wait 10s."
+                            st.warning(text_resp)
+                        else:
+                            text_resp = f"Error: {e}"
+                            st.error(text_resp)
+
+                    # Chart Logic
+                    need_chart = any(k in final_prompt.lower() for k in ["chart", "plot", "graph", "trend", "compare"])
+                    fig = None
+                    if need_chart and "Error" not in text_resp:
+                        fig = generate_chart(final_prompt, df)
+                    
+                    if fig:
+                        st.session_state.messages.append({"role": "assistant", "content": {"text": text_resp, "chart": fig}})
                         st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
-                        st.session_state.messages.append({"role": "assistant", "content": str(text_resp)})
-                        st.markdown(text_resp)
+                        st.session_state.messages.append({"role": "assistant", "content": text_resp})
