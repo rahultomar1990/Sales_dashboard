@@ -11,7 +11,13 @@ st.set_page_config(layout="wide", page_title="Sales Data Analysis", page_icon="�
 # --- 2. CUSTOM CSS ---
 st.markdown("""
     <style>
-        .block-container { padding: 1rem 1rem 3rem 1rem; }
+        /* ADJUSTED PADDING FOR COMPACT LAYOUT */
+        .block-container { 
+            padding-top: 1.5rem !important;
+            padding-bottom: 1rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+        }
         h1 { 
             text-align: left;
             background: -webkit-linear-gradient(45deg, #0b5394, #662d91);
@@ -33,7 +39,6 @@ st.markdown("""
             background: -webkit-linear-gradient(90deg, #0052cc, #00a3ff);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-        /* Vertical divider between the two main columns */
         div[data-testid="column"]:nth-of-type(1) {
             border-right: 2px solid transparent;
             border-image: linear-gradient(to bottom, #f0f0f0 0%, #6C63FF 50%, #f0f0f0 100%);
@@ -64,7 +69,6 @@ def get_data():
             df = pd.read_parquet(CACHE_FILE)
             
             # --- CRITICAL FIX: RE-APPLY DATA TYPES ---
-            # Parquet is great, but we re-force types to ensure the AI reads them correctly
             if 'Order Date' in df.columns:
                 df['Order Date'] = pd.to_datetime(df['Order Date'], errors='coerce')
                 df['Year'] = df['Order Date'].dt.year
@@ -141,7 +145,6 @@ ly_sales = df[df['Year'] == last_year]['Sales'].sum() if 'Year' in df.columns el
 yoy_growth = ((cy_sales - ly_sales) / ly_sales) * 100 if ly_sales > 0 else 0
 
 # --- 7. LAYOUT ---
-# REQUEST: Half page for left side and right side (50/50 split)
 col_dash, col_chat = st.columns([1, 1], gap="small")
 
 # LEFT COLUMN
@@ -150,7 +153,6 @@ with col_dash:
     st.markdown("---")
     
     # REQUEST: Scorecards as Tiles. 
-    # We use a 3x2 Grid layout here to give them space to look like tiles.
     row1_c1, row1_c2, row1_c3 = st.columns(3)
     with row1_c1:
         st.metric("💰 Total Sales", f"${df['Sales'].sum():,.0f}")
@@ -171,19 +173,25 @@ with col_dash:
     
     st.markdown("---")
     
-    # REQUEST: Sales Trend as Line Chart & Remove Pie Chart
+    # REQUEST: Sales Trend (UPDATED WITH DATA LABELS)
     if 'Year' in df.columns:
         st.markdown(f"#### 📅 Sales Trend ({last_year} vs {current_year})")
         trend_df = df[df['Year'].isin([current_year, last_year])]
         monthly_sales = trend_df.groupby(['Month', 'Year'])['Sales'].sum().reset_index()
         
-        # Changed to Line Chart with Markers
+        # Line Chart with Markers AND Text Labels
         fig_line = px.line(monthly_sales, x='Month', y='Sales', color='Year', 
                            markers=True,
-                           color_discrete_sequence=px.colors.qualitative.Set1) # Beautiful Colors
+                           text='Sales',  # <--- Added Data Labels
+                           color_discrete_sequence=px.colors.qualitative.Set1)
         
         fig_line.update_layout(xaxis_title=None, yaxis_title="Revenue ($)", legend_title="Year", height=380, template="plotly_white")
-        fig_line.update_traces(line=dict(width=3), marker=dict(size=8))
+        fig_line.update_traces(
+            line=dict(width=3), 
+            marker=dict(size=8),
+            texttemplate='%{y:.2s}', # Format labels (e.g. 20k)
+            textposition='top center' # Position labels above markers
+        )
         st.plotly_chart(fig_line, use_container_width=True)
 
     with st.expander("📄 View Raw Data Snippet"):
