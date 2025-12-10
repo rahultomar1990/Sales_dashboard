@@ -16,78 +16,97 @@ try:
 except Exception:
     pass # Continue if logo is missing
 
-# --- 2. EXECUTIVE STYLING (GLASSMORPHISM & POLISH) ---
+# --- 2. EXECUTIVE STYLING (IMPROVED CONTRAST) ---
 st.markdown("""
     <style>
-        /* APP BACKGROUND - Subtle Gradient for depth */
+        /* APP BACKGROUND - Deep Royal Gradient for Contrast */
         .stApp {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(160deg, #1a237e 0%, #4a148c 100%);
+            background-attachment: fixed;
         }
         
-        /* SIDEBAR STYLING */
+        /* SIDEBAR STYLING - Clean White Sidebar */
         [data-testid="stSidebar"] {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            border-right: 1px solid rgba(255, 255, 255, 0.5);
+            background-color: #f8f9fa;
+            border-right: 1px solid #ddd;
+        }
+        [data-testid="stSidebar"] * {
+            color: #333 !important;
         }
 
-        /* MAIN Title Styling */
-        h1 { 
-            text-align: left;
-            background: -webkit-linear-gradient(45deg, #d32f2f, #fbc02d); /* Bikano Red/Yellow hues */
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            font-size: 2.2rem; font-weight: 900; margin-bottom: 15px;
+        /* MAIN HEADERS (H1, H2, H3) - White Text to pop against Dark Background */
+        h1, h2, h3 { 
+            color: #ffffff !important;
+            font-family: 'Helvetica Neue', sans-serif;
+            text-shadow: 0px 2px 4px rgba(0,0,0,0.3);
+        }
+        p, label {
+            color: #e0e0e0 !important; /* Light grey for standard text on dark bg */
         }
 
-        /* GLASSMORPHISM METRIC CARDS */
+        /* METRIC CARDS (The Glass Tiles) */
         div[data-testid="metric-container"] {
-            background: rgba(255, 255, 255, 0.65); /* Translucent white */
-            backdrop-filter: blur(12px); /* The frosted glass effect */
-            border: 1px solid rgba(255, 255, 255, 0.4); /* Subtle border */
+            background: rgba(255, 255, 255, 0.9); /* Higher opacity for readability */
+            border: 1px solid rgba(255, 255, 255, 1);
             padding: 20px !important;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10); /* Soft shadow */
-            transition: all 0.3s ease;
-            height: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Stronger shadow */
+            transition: transform 0.2s ease;
         }
         div[data-testid="metric-container"]:hover {
              transform: translateY(-5px);
-             box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
-             border-color: rgba(251, 192, 45, 0.8); /* Yellow glow on hover */
+             border-left: 5px solid #d32f2f; /* Bikano Red Accent */
         }
 
-        /* METRIC VALUES */
+        /* TEXT INSIDE METRICS - Force Black for Contrast */
         div[data-testid="stMetricValue"] {
-            font-size: 26px; font-weight: 800;
-            color: #333;
+            color: #d32f2f !important; /* Bikano Red for numbers */
+            font-size: 28px !important;
+            font-weight: 800 !important;
         }
         div[data-testid="stMetricLabel"] {
-            font-weight: 600; color: #555;
+            color: #333333 !important; /* Dark Grey for labels */
+            font-weight: 700 !important;
+        }
+        div[data-testid="stMetricDelta"] {
+            color: #333333 !important; /* Ensure delta is visible */
         }
 
-        /* CHAT AREA STYLING */
+        /* CHAT & INPUT AREAS */
         .stChatInput {
+            background-color: white !important;
             border-radius: 20px !important;
         }
         [data-testid="stChatMessage"] {
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.3);
+            color: #000;
+        }
+        /* Fix text color inside chat bubbles */
+        [data-testid="stChatMessage"] p {
+            color: #000 !important;
         }
         
-        /* CUSTOM BUTTONS FOR AI */
+        /* CUSTOM BUTTONS */
         .stButton button {
-            background: linear-gradient(to right, #d32f2f, #e57373);
-            color: white;
+            background: linear-gradient(to right, #fbc02d, #f57f17); /* Bikano Yellow/Gold */
+            color: #000;
             border: none;
-            border-radius: 12px;
-            font-weight: 600;
+            border-radius: 8px;
+            font-weight: 700;
             transition: all 0.2s;
         }
         .stButton button:hover {
-             background: linear-gradient(to right, #b71c1c, #d32f2f);
              transform: scale(1.02);
+             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+             color: #000;
+        }
+        
+        /* EXPANDER TEXT FIX */
+        .streamlit-expanderHeader {
+            color: #333 !important;
+            background-color: #fff !important;
+            border-radius: 5px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -139,7 +158,7 @@ def generate_chart(prompt, df):
         User Query: "{prompt}"
         INSTRUCTIONS:
         1. INTELLIGENTLY CHOOSE CHART TYPE.
-        2. STYLE: Use `template='plotly_white'`. Use BOLD colors.
+        2. STYLE: Use `template='plotly_white'`.
         3. OUTPUT: Write ONLY the raw Python code for figure named 'fig'. Use 'df'.
         """
         response = chart_llm.invoke(code_prompt)
@@ -166,59 +185,67 @@ col_dash, col_chat = st.columns([1, 1], gap="large")
 
 # ================= LEFT COLUMN: DASHBOARD =================
 with col_dash:
-    # Header with Bikano theme colors
-    st.markdown(f"<h1>Bikano Executive Overview <span style='font-size:1.2rem; color:#555'>| FY {current_year}</span></h1>", unsafe_allow_html=True)
+    # Header with White Text (controlled by CSS)
+    st.markdown(f"<h1>Bikano Sales Intelligence <span style='font-size:1.2rem; opacity:0.8'>| FY {current_year}</span></h1>", unsafe_allow_html=True)
     st.markdown("---")
     
     # GLASSMORPHISM TILES (3x2 Grid)
+    # The CSS above forces the text inside these metrics to be Dark Grey/Red so they are readable on the white cards.
     row1_c1, row1_c2, row1_c3 = st.columns(3)
-    with row1_c1: st.metric("💰 Total Revenue", f"${df['Sales'].sum():,.0f}")
-    with row1_c2: st.metric(f"📅 CY {current_year} Sales", f"${cy_sales:,.0f}")
-    with row1_c3: st.metric(f"⏮️ LY {last_year} Sales", f"${ly_sales:,.0f}", delta=f"${cy_sales-ly_sales:,.0f}")
+    with row1_c1: st.metric("Total Revenue", f"${df['Sales'].sum():,.0f}")
+    with row1_c2: st.metric(f"CY {current_year} Sales", f"${cy_sales:,.0f}")
+    with row1_c3: st.metric(f"LY {last_year} Sales", f"${ly_sales:,.0f}", delta=f"${cy_sales-ly_sales:,.0f}")
 
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True) # Spacer
 
     row2_c1, row2_c2, row2_c3 = st.columns(3)
-    with row2_c1: st.metric("📈 YoY Growth", f"{yoy_growth:.2f}%", delta=f"{yoy_growth:.2f}%")
-    with row2_c2: st.metric("📦 Total Orders", f"{orders_count:,}")
-    with row2_c3: st.metric("🔢 Units Sold", f"{units_count:,.0f}")
+    with row2_c1: st.metric("YoY Growth", f"{yoy_growth:.2f}%", delta=f"{yoy_growth:.2f}%")
+    with row2_c2: st.metric("Total Orders", f"{orders_count:,}")
+    with row2_c3: st.metric("Units Sold", f"{units_count:,.0f}")
     
     st.markdown("---")
     
-    # TREND CHART (Clean Line Chart)
+    # TREND CHART
     if 'Year' in df.columns:
-        st.subheader(f"📅 Sales Performance Trend ({last_year} vs {current_year})")
+        st.subheader(f"📅 Sales Trend ({last_year} vs {current_year})")
         trend_df = df[df['Year'].isin([current_year, last_year])]
         monthly_sales = trend_df.groupby(['Month', 'Year'])['Sales'].sum().reset_index()
         
-        # Using a bold red/gold palette for Bikano
-        custom_colors = ['#d32f2f', '#fbc02d'] 
-        fig_line = px.line(monthly_sales, x='Month', y='Sales', color='Year', markers=True,
-                           color_discrete_sequence=custom_colors)
+        # High contrast colors for the dark background
+        custom_colors = ['#ffeb3b', '#00e5ff'] # Bright Yellow & Cyan for dark mode visibility
         
-        fig_line.update_layout(xaxis_title=None, yaxis_title="Revenue ($)", legend_title="Fiscal Year", 
-                               height=400, template="plotly_white",
-                               hovermode="x unified")
+        fig_line = px.line(monthly_sales, x='Month', y='Sales', color='Year', markers=True,
+                           color_discrete_sequence=px.colors.qualitative.Set1) # Using Set1 for distinct colors
+        
+        fig_line.update_layout(
+            xaxis_title=None, 
+            yaxis_title="Revenue ($)", 
+            legend_title="Fiscal Year", 
+            height=400, 
+            template="plotly_white", # Keep chart background white for readability
+            hovermode="x unified",
+            paper_bgcolor='rgba(255,255,255,0.9)', # Semi-transparent white backing for chart
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
         fig_line.update_traces(line=dict(width=4), marker=dict(size=10, line=dict(width=2, color='white')))
         st.plotly_chart(fig_line, use_container_width=True)
 
 # ================= RIGHT COLUMN: AI ANALYST =================
 with col_chat:
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-    # Styled header for AI
-    st.markdown("<h3 style='color:#d32f2f;'>🤖 Bikano AI Data Analyst</h3>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#666;'>Instant insights from your sales data.</p>", unsafe_allow_html=True)
+    # Header
+    st.markdown("<h3>🤖 AI Executive Assistant</h3>", unsafe_allow_html=True)
+    st.markdown("<p>Ask questions about your sales data naturally.</p>", unsafe_allow_html=True)
 
-    # --- NEW: EXECUTIVE QUICK ACTION BUTTONS ---
-    # These buttons allow one-click querying
+    # QUICK ACTION BUTTONS
     qa_c1, qa_c2, qa_c3 = st.columns(3)
     prompt_to_run = None
     
-    if qa_c1.button("🔥 Top 5 Products", use_container_width=True, help="Click to see best sellers CY"):
+    if qa_c1.button("🔥 Top Products", use_container_width=True):
         prompt_to_run = f"Show me a table of the top 5 Products by Sales in {current_year}."
-    if qa_c2.button("🏙️ Region Performance", use_container_width=True, help="Sales breakdown by region/city"):
+    if qa_c2.button("🏙️ Region Sales", use_container_width=True):
         prompt_to_run = f"Show total sales broken down by City or Region for {current_year}, as a bar chart."
-    if qa_c3.button("📉 Slow Movers CY", use_container_width=True, help="Identify bottom performing items"):
+    if qa_c3.button("📉 Low Growth", use_container_width=True):
         prompt_to_run = f"Which 5 products have the lowest Sales in {current_year}? Show in a table."
 
     # AI Agent Setup
@@ -240,10 +267,9 @@ with col_chat:
                 else:
                     st.markdown(msg["content"])
 
-    # Input handling: Either from text input OR quick action button
+    # Input handling
     user_input = st.chat_input("Ex: 'Compare sales of Product A vs B'")
     
-    # Determine final prompt to process
     final_prompt = prompt_to_run if prompt_to_run else user_input
 
     if final_prompt:
@@ -253,7 +279,7 @@ with col_chat:
                 st.markdown(final_prompt)
             
             with st.chat_message("assistant"):
-                with st.spinner("Bikano AI is crunching the numbers..."):
+                with st.spinner("Analyzing..."):
                     text_resp = ""
                     try:
                         style = "\nIMPORTANT: Format numbers with commas. Use Markdown Tables. Start response with 'Final Answer:'."
@@ -264,7 +290,6 @@ with col_chat:
                         text_resp = f"Could not format data. Error: {e}"
                         st.error(text_resp)
 
-                    # Intelligent Chart Triggering
                     need_chart = any(k in final_prompt.lower() for k in ["chart", "plot", "graph", "trend", "compare"])
                     fig = None
                     if need_chart and "Error" not in text_resp:
