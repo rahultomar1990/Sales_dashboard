@@ -50,7 +50,7 @@ st.markdown("""
 
 # --- 3. CONFIGURATION ---
 # NOTE: We use os.environ to avoid hardcoding keys if you use secrets, but hardcoding works for testing.
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "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"
 CACHE_FILE = "sales_data_cache.parquet"
 
 # --- 4. DATA ENGINE (CLOUD MODE: PARQUET ONLY) ---
@@ -258,4 +258,5 @@ with col_chat:
                             st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
                         st.session_state.messages.append({"role": "assistant", "content": text_response})
+
 
