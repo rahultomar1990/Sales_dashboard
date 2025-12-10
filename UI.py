@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 import os
 
@@ -18,7 +17,7 @@ except Exception:
 # --- 2. CSS FOR PERFECT ALIGNMENT & DARK MODE ---
 st.markdown("""
     <style>
-        /* 1. MAXIMIZE SCREEN USAGE (Remove Whitespace) */
+        /* 1. MAXIMIZE SCREEN USAGE */
         .block-container {
             padding-top: 1.5rem !important;
             padding-bottom: 1rem !important;
@@ -51,7 +50,7 @@ st.markdown("""
             color: #FFFFFF !important;
         }
         
-        /* 5. KPI TILES (Compact & readable) */
+        /* 5. KPI TILES */
         div[data-testid="metric-container"] {
             background-color: #1E1E1E;
             border: 1px solid #333;
@@ -69,11 +68,10 @@ st.markdown("""
             font-size: 24px !important;
         }
 
-        /* 6. CHAT INPUT & CONTAINER ALIGNMENT */
+        /* 6. CHAT INPUT */
         .stChatInput {
-            bottom: 10px !important; /* Align nicely at bottom */
+            bottom: 10px !important; 
         }
-        /* Style the chat bubbles */
         [data-testid="stChatMessage"] {
             background-color: #1E1E1E !important;
             border: 1px solid #333;
@@ -102,7 +100,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. CONFIGURATION ---
-# NOTE: Switched to 'llama-3.1-8b-instant' to prevent Rate Limits
 GROQ_API_KEY = "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"
 CACHE_FILE = "sales_data_cache.parquet"
 
@@ -139,29 +136,44 @@ if isinstance(data_result, str):
 else:
     df = data_result
 
-# --- 5. CHART ENGINE ---
-def generate_chart(prompt, df):
+# --- 5. CORE AI ENGINE (No-Loop Direct Execution) ---
+def ask_ai(prompt, df):
+    """
+    Directly converts a question to Pandas code and executes it.
+    This prevents 'Thinking' loops and is much faster.
+    """
     try:
-        # UPDATED MODEL TO 8B INSTANT (Prevents Rate Limits)
-        chart_llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
+        # Use the Stable Llama 3 Model
+        llm = ChatGroq(temperature=0, model_name="llama3-8b-8192", api_key=GROQ_API_KEY)
+        
+        # 1. Determine if we need a chart or just data
         code_prompt = f"""
-        You are a Python Data Visualization Expert using Plotly Express.
-        The user wants a visual based on this dataframe: {df.columns.tolist()}
-        User Query: "{prompt}"
+        You are a Python Data Analyst. 
+        DataFrame `df` has columns: {df.columns.tolist()}.
+        User Question: "{prompt}"
+        
         INSTRUCTIONS:
-        1. INTELLIGENTLY CHOOSE CHART TYPE.
-        2. STYLE: 
-           - **CRITICAL**: Use `template='plotly_dark'`.
-           - Colors: Use bright vivid colors that pop on dark background.
-        3. OUTPUT: Write ONLY the raw Python code for figure named 'fig'. Use 'df'.
+        1. Write PYTHON CODE to calculate the answer.
+        2. Assign the final answer (string, number, or markdown table) to a variable named `result`.
+        3. If the user asks for a plot/chart/graph, create a Plotly Express figure named `fig`.
+        4. Wrap code in ```python blocks.
+        5. DO NOT print anything. Just assign `result` or `fig`.
+        
+        Example:
+        result = df['Sales'].sum()
         """
-        response = chart_llm.invoke(code_prompt)
+        
+        response = llm.invoke(code_prompt)
         cleaned_code = response.content.replace("```python", "").replace("```", "").strip()
-        local_vars = {"df": df, "px": px}
+        
+        # Execute Code safely
+        local_vars = {"df": df, "px": px, "result": "I couldn't calculate that.", "fig": None}
         exec(cleaned_code, globals(), local_vars)
-        return local_vars.get('fig', None)
-    except Exception:
-        return None
+        
+        return local_vars.get('result', "No result found."), local_vars.get('fig', None)
+        
+    except Exception as e:
+        return f"Error processing query: {str(e)}", None
 
 # --- 6. CALCULATIONS ---
 min_year = int(df['Year'].min()) if 'Year' in df.columns else 2020
@@ -179,7 +191,6 @@ col_dash, col_chat = st.columns([1, 1], gap="medium")
 
 # ================= LEFT COLUMN: DASHBOARD =================
 with col_dash:
-    # Header
     st.markdown(f"<h1>Bikano Sales Intelligence <span style='font-size:1.2rem; color:#FFCA28'>| FY {current_year}</span></h1>", unsafe_allow_html=True)
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     
@@ -214,7 +225,7 @@ with col_dash:
             xaxis_title=None, 
             yaxis_title=None, 
             legend_title=None, 
-            height=340,  # Optimized height to fit screen
+            height=340, 
             template="plotly_dark", 
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
@@ -246,19 +257,13 @@ with col_chat:
     if qa_c3.button("📉 Low Growth", use_container_width=True):
         prompt_to_run = f"Which 5 products have the lowest Sales in {current_year}? Show in a table."
 
-    # AI SETUP
-    if "messages" not in st.session_state: st.session_state.messages = []
-    if "agent" not in st.session_state:
-        # UPDATED MODEL TO 8B INSTANT
-        llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
-        prefix = f"""You are an expert Bikano Data Analyst. Dataset years: {min_year}-{max_year}. 'CY'={current_year}. Always provide Final Answer as nicely formatted Markdown Tables."""
-        st.session_state.agent = create_pandas_dataframe_agent(llm, df, verbose=True, allow_dangerous_code=True, handle_parsing_errors=True, max_iterations=10, prefix=prefix)
-
     # CHAT HISTORY
+    if "messages" not in st.session_state: st.session_state.messages = []
+    
     chat_container = st.container(height=580)
     with chat_container:
         if not st.session_state.messages:
-            st.info(f"👋 Hi! I'm your AI analyst. Ask me anything about your {orders_count} orders!")
+            st.info(f"👋 Ready! I can analyze data instantly.")
         
         for i, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"]):
@@ -281,28 +286,15 @@ with col_chat:
                 st.markdown(final_prompt)
             
             with st.chat_message("assistant"):
-                with st.spinner("Analyzing..."):
-                    text_resp = ""
-                    try:
-                        style = "\nIMPORTANT: Format numbers with commas. Use Markdown Tables. Start response with 'Final Answer:'."
-                        resp = st.session_state.agent.invoke(final_prompt + style)
-                        text_resp = resp['output']
-                        st.markdown(text_resp)
-                    except Exception as e:
-                        if "429" in str(e):
-                            text_resp = "⚠️ **High Traffic**: Rate Limit Hit. Please wait 10 seconds."
-                            st.warning(text_resp)
-                        else:
-                            text_resp = f"Error: {e}"
-                            st.error(text_resp)
+                with st.spinner("Calculating..."):
+                    # CALL THE NEW DIRECT ENGINE
+                    text_resp, fig = ask_ai(final_prompt, df)
 
-                    need_chart = any(k in final_prompt.lower() for k in ["chart", "plot", "graph", "trend", "compare"])
-                    fig = None
-                    if need_chart and "Error" not in text_resp:
-                        fig = generate_chart(final_prompt, df)
-                    
+                    # Display Response
                     if fig:
-                        st.session_state.messages.append({"role": "assistant", "content": {"text": text_resp, "chart": fig}})
+                        st.session_state.messages.append({"role": "assistant", "content": {"text": str(text_resp), "chart": fig}})
+                        st.markdown(text_resp)
                         st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
-                        st.session_state.messages.append({"role": "assistant", "content": text_resp})
+                        st.session_state.messages.append({"role": "assistant", "content": str(text_resp)})
+                        st.markdown(text_resp)
