@@ -6,118 +6,85 @@ from langchain_groq import ChatGroq
 import os
 
 # --- 1. PAGE SETUP ---
-st.set_page_config(layout="wide", page_title="Sales Dashboard", page_icon="📈")
+st.set_page_config(layout="wide", page_title="Sales Data Analysis", page_icon="📈")
 
-# --- 2. THEME CONFIGURATION ---
-with st.sidebar:
-    st.header("🎨 Appearance")
-    theme_choice = st.selectbox("Choose Theme:", ["Default (Light)", "Dark Mode", "Midnight Blue"])
-
-# Define CSS Variables based on Theme
-if theme_choice == "Dark Mode":
-    bg_color = "#0E1117"
-    text_color = "#FFFFFF"
-    card_bg = "#262730"
-    card_border = "#41444C"
-    metric_value_color = "#4DA6FF"
-    chat_user_bg = "#262730"
-    chat_ai_bg = "#1E1E1E"
-    chart_template = "plotly_dark"
-elif theme_choice == "Midnight Blue":
-    bg_color = "#00172B"
-    text_color = "#E6E6E6"
-    card_bg = "#002B4E"
-    card_border = "#004074"
-    metric_value_color = "#00D4FF"
-    chat_user_bg = "#003366"
-    chat_ai_bg = "#002244"
-    chart_template = "plotly_dark"
-else: # Default Light
-    bg_color = "#FFFFFF"
-    text_color = "#000000"
-    card_bg = "linear-gradient(135deg, #ffffff, #f0f2f6)"
-    card_border = "#e0e0e0"
-    metric_value_color = "#0b5394"
-    chat_user_bg = "#f0f2f6"
-    chat_ai_bg = "#ffffff"
-    chart_template = "plotly_white"
-
-# --- 3. INJECT CUSTOM CSS ---
-st.markdown(f"""
+# --- 2. CUSTOM CSS (FIXED LAYOUT & DARK THEME) ---
+st.markdown("""
     <style>
-        /* MAIN CONTAINER PADDING (Shift Up) */
-        .block-container {{
-            padding-top: 1rem !important;
-            padding-bottom: 2rem !important;
+        /* 1. CONTAINER PADDING (Fixed 'Cut Off' Issue) */
+        .block-container {
+            padding-top: 2.5rem !important; /* Increased to prevent header clipping */
+            padding-bottom: 1rem !important;
             padding-left: 2rem !important;
             padding-right: 2rem !important;
-        }}
+        }
         
-        /* GLOBAL BACKGROUND & TEXT */
-        .stApp {{
-            background-color: {bg_color};
-            color: {text_color};
-        }}
+        /* 2. GLOBAL DARK THEME */
+        .stApp {
+            background-color: #0E1117;
+            color: #FFFFFF;
+        }
         
-        /* TITLE */
-        h1 {{
-            color: {text_color} !important;
-            padding-bottom: 10px;
-        }}
+        /* 3. HEADERS */
+        h1, h2, h3 {
+            color: #FFFFFF !important;
+            font-weight: 700;
+        }
+        h3 {
+            margin-top: 0px !important;
+            padding-top: 0px !important;
+        }
         
-        /* METRIC CARDS */
-        div[data-testid="metric-container"] {{
-            background: {card_bg};
-            border: 1px solid {card_border};
+        /* 4. METRIC CARDS */
+        div[data-testid="metric-container"] {
+            background-color: #262730;
+            border: 1px solid #41444C;
             padding: 10px;
             border-radius: 10px;
             border-left: 5px solid #6C63FF;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        div[data-testid="stMetricValue"] {{
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        div[data-testid="stMetricValue"] {
             font-size: 22px;
             font-weight: 700;
-            color: {metric_value_color} !important;
-        }}
-        div[data-testid="stMetricLabel"] {{
+            color: #4DA6FF !important;
+        }
+        div[data-testid="stMetricLabel"] {
             font-size: 13px;
             font-weight: 600;
-            color: {text_color};
-            opacity: 0.8;
-        }}
+            color: #E6E6E6;
+        }
 
-        /* CHAT BUBBLES */
-        div[data-testid="stChatMessage"]:nth-child(odd) {{
-            background-color: {chat_user_bg};
+        /* 5. CHAT BUBBLES */
+        div[data-testid="stChatMessage"]:nth-child(odd) {
+            background-color: #262730; /* User */
             border-radius: 15px;
-            border: 1px solid {card_border};
-        }}
-        div[data-testid="stChatMessage"]:nth-child(even) {{
-            background-color: {chat_ai_bg};
+            border: 1px solid #41444C;
+        }
+        div[data-testid="stChatMessage"]:nth-child(even) {
+            background-color: #1E1E1E; /* AI */
             border-radius: 15px;
-            border: 1px solid {card_border};
-        }}
+            border: 1px solid #41444C;
+        }
         
-        /* EXPANDER HEADER */
-        .streamlit-expanderHeader {{
-            color: {text_color};
-            background-color: {card_bg};
+        /* 6. EXPANDER & TABLES */
+        .streamlit-expanderHeader {
+            color: #FFFFFF;
+            background-color: #262730;
             border-radius: 5px;
-        }}
-        
-        /* TABLE TEXT COLOR */
-        div[data-testid="stDataFrame"] {{
-            color: {text_color};
-        }}
+        }
+        div[data-testid="stDataFrame"] {
+            color: #FFFFFF;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 4. CONFIGURATION ---
+# --- 3. CONFIGURATION ---
 # NOTE: In production, put this in st.secrets
 GROQ_API_KEY = "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" 
 CACHE_FILE = "sales_data_cache.parquet"
 
-# --- 5. CLOUD DATA ENGINE (Parquet Only) ---
+# --- 4. CLOUD DATA ENGINE (Parquet Only) ---
 @st.cache_data(show_spinner=False)
 def get_data():
     if os.path.exists(CACHE_FILE):
@@ -153,7 +120,7 @@ if isinstance(df, str):
     st.error(df)
     st.stop()
 
-# --- 6. CHART ENGINE ---
+# --- 5. CHART ENGINE ---
 def generate_chart(prompt, df):
     try:
         chart_llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
@@ -165,7 +132,7 @@ def generate_chart(prompt, df):
         INSTRUCTIONS:
         1. Create a figure named 'fig'.
         2. **MANDATORY**: For Bar Charts, Set `color` to the x-axis column to make it colorful.
-        3. Style: Use `template='{chart_template}'`.
+        3. Style: Use `template='plotly_dark'`.
         4. Colors: Use `color_discrete_sequence=px.colors.qualitative.Bold`.
         5. OUTPUT: RAW CODE ONLY. NO MARKDOWN.
         """
@@ -177,20 +144,20 @@ def generate_chart(prompt, df):
     except:
         return None
 
-# --- 7. CALCULATIONS ---
+# --- 6. CALCULATIONS ---
 current_year = int(df['Year'].max()) if 'Year' in df.columns else 2024
 last_year = current_year - 1
 cy_sales = df[df['Year'] == current_year]['Sales'].sum() if 'Year' in df.columns else 0
 ly_sales = df[df['Year'] == last_year]['Sales'].sum() if 'Year' in df.columns else 0
 yoy_growth = ((cy_sales - ly_sales) / ly_sales) * 100 if ly_sales > 0 else 0
 
-# --- 8. MAIN LAYOUT (2 Columns) ---
-# Left: Dashboard | Right: Chat
+# --- 7. MAIN LAYOUT (2 Columns) ---
 col_dash, col_chat = st.columns([1.6, 1], gap="medium")
 
 # === LEFT COLUMN: DASHBOARD ===
 with col_dash:
     st.title("Sales Data Analysis")
+    st.markdown("---")
     
     # Metrics Row 1
     c1, c2, c3 = st.columns(3)
@@ -219,12 +186,12 @@ with col_dash:
             fig_bar = px.bar(monthly_sales, x='Month', y='Sales', color='Year', barmode='group', 
                              color_discrete_sequence=px.colors.qualitative.Bold)
             
-            # FIX: Add bottom margin so Month names aren't hidden
+            # Fixed Margins for visibility
             fig_bar.update_layout(
                 xaxis_title=None, yaxis_title=None, legend_title=None, 
                 height=300, 
-                margin=dict(l=0, r=0, t=0, b=30), # Bottom margin added
-                template=chart_template,
+                margin=dict(l=0, r=0, t=0, b=30), 
+                template="plotly_dark",
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig_bar, use_container_width=True)
@@ -234,7 +201,6 @@ with col_dash:
             st.markdown("#### 🏢 Sales by Division")
             div_sales = df.groupby('Division')['Sales'].sum().reset_index()
             
-            # User Requested Pie Chart
             fig_pie = px.pie(div_sales, values='Sales', names='Division', hole=0.5, 
                              color_discrete_sequence=px.colors.qualitative.Bold)
             
@@ -242,7 +208,7 @@ with col_dash:
             fig_pie.update_layout(
                 height=300, 
                 margin=dict(l=0, r=0, t=0, b=20),
-                template=chart_template,
+                template="plotly_dark",
                 showlegend=True,
                 legend=dict(orientation="v", yanchor="middle", y=0.5)
             )
