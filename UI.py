@@ -143,7 +143,7 @@ col_dash, col_chat = st.columns([2.5, 1.2], gap="medium")
 
 # LEFT COLUMN
 with col_dash:
-    st.title("Sales Data Analysis with AI Assistant")
+    st.title("Sales Data Analysis with AGENTIC AI ")
     st.markdown("---")
     
     m1, m2, m3, m4, m5, m6 = st.columns(6)
@@ -184,7 +184,7 @@ with col_dash:
 # RIGHT COLUMN
 with col_chat:
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-    st.subheader("🤖 AI Data Analyst (Groq)")
+    st.subheader("🤖 AI Data Analyst (Created by Rahul)")
     st.info("Ask: 'Show me top 5 cities/product/year by sales'")
 
     if "messages" not in st.session_state: st.session_state.messages = []
@@ -258,3 +258,4 @@ with col_chat:
                             st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
                         st.session_state.messages.append({"role": "assistant", "content": text_response})
+
