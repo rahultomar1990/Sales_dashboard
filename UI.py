@@ -102,7 +102,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. CONFIGURATION ---
-# NOTE: Rate limits are common with free keys. If it fails, wait 60s.
+# NOTE: Switched to 'llama-3.1-8b-instant' to prevent Rate Limits
 GROQ_API_KEY = "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"
 CACHE_FILE = "sales_data_cache.parquet"
 
@@ -142,7 +142,8 @@ else:
 # --- 5. CHART ENGINE ---
 def generate_chart(prompt, df):
     try:
-        chart_llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
+        # UPDATED MODEL TO 8B INSTANT (Prevents Rate Limits)
+        chart_llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
         code_prompt = f"""
         You are a Python Data Visualization Expert using Plotly Express.
         The user wants a visual based on this dataframe: {df.columns.tolist()}
@@ -248,12 +249,12 @@ with col_chat:
     # AI SETUP
     if "messages" not in st.session_state: st.session_state.messages = []
     if "agent" not in st.session_state:
-        llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
+        # UPDATED MODEL TO 8B INSTANT
+        llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
         prefix = f"""You are an expert Bikano Data Analyst. Dataset years: {min_year}-{max_year}. 'CY'={current_year}. Always provide Final Answer as nicely formatted Markdown Tables."""
         st.session_state.agent = create_pandas_dataframe_agent(llm, df, verbose=True, allow_dangerous_code=True, handle_parsing_errors=True, max_iterations=10, prefix=prefix)
 
-    # CHAT HISTORY - EXPANDED HEIGHT
-    # Increased to 580px so charts have more room, ensuring alignment with left side.
+    # CHAT HISTORY
     chat_container = st.container(height=580)
     with chat_container:
         if not st.session_state.messages:
@@ -288,9 +289,8 @@ with col_chat:
                         text_resp = resp['output']
                         st.markdown(text_resp)
                     except Exception as e:
-                        # Friendly Error Handling for Rate Limits
                         if "429" in str(e):
-                            text_resp = "⚠️ **High Traffic**: The AI is currently busy (Rate Limit). Please wait 30 seconds and try again."
+                            text_resp = "⚠️ **High Traffic**: Rate Limit Hit. Please wait 10 seconds."
                             st.warning(text_resp)
                         else:
                             text_resp = f"Error: {e}"
@@ -298,7 +298,7 @@ with col_chat:
 
                     need_chart = any(k in final_prompt.lower() for k in ["chart", "plot", "graph", "trend", "compare"])
                     fig = None
-                    if need_chart and "Error" not in text_resp and "Rate Limit" not in text_resp:
+                    if need_chart and "Error" not in text_resp:
                         fig = generate_chart(final_prompt, df)
                     
                     if fig:
