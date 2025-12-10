@@ -8,105 +8,80 @@ import os
 # --- 1. PAGE SETUP & BRANDING ---
 st.set_page_config(layout="wide", page_title="Bikano Sales Intelligence", page_icon="📈")
 
-# Try to load logo (make sure 'bikano_logo.png' is in the same directory)
-LOGO_PATH = "bikano_logo.png"
+# UPDATE: Using the exact filename you provided
+LOGO_PATH = "Bikano new logo.jpg"
 try:
-    # st.logo is a newer feature for top-left branding
     st.logo(LOGO_PATH, icon_image=LOGO_PATH)
 except Exception:
-    pass # Continue if logo is missing
+    pass 
 
-# --- 2. EXECUTIVE STYLING (IMPROVED CONTRAST) ---
+# --- 2. PROFESSIONAL DARK MODE CSS ---
 st.markdown("""
     <style>
-        /* APP BACKGROUND - Deep Royal Gradient for Contrast */
+        /* MAIN BACKGROUND - Clean Dark Mode */
         .stApp {
-            background: linear-gradient(160deg, #1a237e 0%, #4a148c 100%);
-            background-attachment: fixed;
+            background-color: #0E1117;
+            color: #FAFAFA;
         }
         
-        /* SIDEBAR STYLING - Clean White Sidebar */
+        /* SIDEBAR - Darker Shade */
         [data-testid="stSidebar"] {
-            background-color: #f8f9fa;
-            border-right: 1px solid #ddd;
-        }
-        [data-testid="stSidebar"] * {
-            color: #333 !important;
+            background-color: #262730;
+            border-right: 1px solid #333;
         }
 
-        /* MAIN HEADERS (H1, H2, H3) - White Text to pop against Dark Background */
+        /* HEADERS */
         h1, h2, h3 { 
-            color: #ffffff !important;
-            font-family: 'Helvetica Neue', sans-serif;
-            text-shadow: 0px 2px 4px rgba(0,0,0,0.3);
+            color: #FFFFFF !important;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 700;
         }
-        p, label {
-            color: #e0e0e0 !important; /* Light grey for standard text on dark bg */
-        }
-
-        /* METRIC CARDS (The Glass Tiles) */
+        
+        /* METRIC CARDS - Dark Surface with Bikano Red Accent */
         div[data-testid="metric-container"] {
-            background: rgba(255, 255, 255, 0.9); /* Higher opacity for readability */
-            border: 1px solid rgba(255, 255, 255, 1);
-            padding: 20px !important;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Stronger shadow */
-            transition: transform 0.2s ease;
+            background-color: #1E1E1E;
+            border: 1px solid #333;
+            padding: 15px !important;
+            border-radius: 10px;
+            border-left: 5px solid #D32F2F; /* BIKANO RED */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
-        div[data-testid="metric-container"]:hover {
-             transform: translateY(-5px);
-             border-left: 5px solid #d32f2f; /* Bikano Red Accent */
-        }
-
-        /* TEXT INSIDE METRICS - Force Black for Contrast */
-        div[data-testid="stMetricValue"] {
-            color: #d32f2f !important; /* Bikano Red for numbers */
-            font-size: 28px !important;
-            font-weight: 800 !important;
-        }
+        
+        /* METRIC TEXT - High Contrast */
         div[data-testid="stMetricLabel"] {
-            color: #333333 !important; /* Dark Grey for labels */
+            color: #B0B0B0 !important; /* Light Grey for label */
+            font-size: 14px;
+        }
+        div[data-testid="stMetricValue"] {
+            color: #FFCA28 !important; /* BIKANO YELLOW for numbers */
+            font-size: 26px !important;
             font-weight: 700 !important;
         }
         div[data-testid="stMetricDelta"] {
-            color: #333333 !important; /* Ensure delta is visible */
+            color: #4CAF50 !important; /* Bright Green for growth */
         }
 
-        /* CHAT & INPUT AREAS */
-        .stChatInput {
-            background-color: white !important;
-            border-radius: 20px !important;
-        }
-        [data-testid="stChatMessage"] {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            color: #000;
-        }
-        /* Fix text color inside chat bubbles */
-        [data-testid="stChatMessage"] p {
-            color: #000 !important;
-        }
-        
-        /* CUSTOM BUTTONS */
+        /* CUSTOM BUTTONS - Bikano Gradient */
         .stButton button {
-            background: linear-gradient(to right, #fbc02d, #f57f17); /* Bikano Yellow/Gold */
-            color: #000;
+            background: linear-gradient(45deg, #D32F2F, #B71C1C); /* Red Gradient */
+            color: white;
             border: none;
             border-radius: 8px;
-            font-weight: 700;
-            transition: all 0.2s;
+            font-weight: 600;
         }
         .stButton button:hover {
-             transform: scale(1.02);
-             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-             color: #000;
+            background: linear-gradient(45deg, #B71C1C, #D32F2F);
+            border: 1px solid #FFCA28; /* Yellow border on hover */
+        }
+
+        /* CHAT INPUT */
+        .stChatInput {
+            border-radius: 20px !important;
         }
         
-        /* EXPANDER TEXT FIX */
-        .streamlit-expanderHeader {
-            color: #333 !important;
-            background-color: #fff !important;
-            border-radius: 5px;
+        /* CHART BACKGROUND */
+        .js-plotly-plot .plotly .main-svg {
+            background: rgba(0,0,0,0) !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -139,7 +114,7 @@ def get_data():
         return "⚠️ CRITICAL: 'sales_data_cache.parquet' not found!"
 
 # --- LOAD DATA ---
-with st.spinner("🚀 Launching Bikano Analytics..."):
+with st.spinner("🚀 Loading Dashboard..."):
     data_result = get_data()
 
 if isinstance(data_result, str):
@@ -148,7 +123,7 @@ if isinstance(data_result, str):
 else:
     df = data_result
 
-# --- 5. CHART ENGINE ---
+# --- 5. CHART ENGINE (UPDATED FOR DARK MODE) ---
 def generate_chart(prompt, df):
     try:
         chart_llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
@@ -158,7 +133,9 @@ def generate_chart(prompt, df):
         User Query: "{prompt}"
         INSTRUCTIONS:
         1. INTELLIGENTLY CHOOSE CHART TYPE.
-        2. STYLE: Use `template='plotly_white'`.
+        2. STYLE: 
+           - **CRITICAL**: Use `template='plotly_dark'`.
+           - Colors: Use bright vivid colors that pop on dark background.
         3. OUTPUT: Write ONLY the raw Python code for figure named 'fig'. Use 'df'.
         """
         response = chart_llm.invoke(code_prompt)
@@ -185,12 +162,11 @@ col_dash, col_chat = st.columns([1, 1], gap="large")
 
 # ================= LEFT COLUMN: DASHBOARD =================
 with col_dash:
-    # Header with White Text (controlled by CSS)
-    st.markdown(f"<h1>Bikano Sales Intelligence <span style='font-size:1.2rem; opacity:0.8'>| FY {current_year}</span></h1>", unsafe_allow_html=True)
+    # Header
+    st.markdown(f"<h1>Bikano Sales Intelligence <span style='font-size:1.2rem; color:#FFCA28'>| FY {current_year}</span></h1>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # GLASSMORPHISM TILES (3x2 Grid)
-    # The CSS above forces the text inside these metrics to be Dark Grey/Red so they are readable on the white cards.
+    # METRIC TILES
     row1_c1, row1_c2, row1_c3 = st.columns(3)
     with row1_c1: st.metric("Total Revenue", f"${df['Sales'].sum():,.0f}")
     with row1_c2: st.metric(f"CY {current_year} Sales", f"${cy_sales:,.0f}")
@@ -205,39 +181,38 @@ with col_dash:
     
     st.markdown("---")
     
-    # TREND CHART
+    # TREND CHART (Dark Mode Optimized)
     if 'Year' in df.columns:
         st.subheader(f"📅 Sales Trend ({last_year} vs {current_year})")
         trend_df = df[df['Year'].isin([current_year, last_year])]
         monthly_sales = trend_df.groupby(['Month', 'Year'])['Sales'].sum().reset_index()
         
-        # High contrast colors for the dark background
-        custom_colors = ['#ffeb3b', '#00e5ff'] # Bright Yellow & Cyan for dark mode visibility
+        # Bikano Colors: Yellow & Red (Brightened for Dark Mode)
+        custom_colors = ['#FFD600', '#FF5252'] 
         
         fig_line = px.line(monthly_sales, x='Month', y='Sales', color='Year', markers=True,
-                           color_discrete_sequence=px.colors.qualitative.Set1) # Using Set1 for distinct colors
+                           color_discrete_sequence=custom_colors)
         
+        # KEY CHANGE: template='plotly_dark' for dark background integration
         fig_line.update_layout(
             xaxis_title=None, 
             yaxis_title="Revenue ($)", 
             legend_title="Fiscal Year", 
             height=400, 
-            template="plotly_white", # Keep chart background white for readability
-            hovermode="x unified",
-            paper_bgcolor='rgba(255,255,255,0.9)', # Semi-transparent white backing for chart
-            plot_bgcolor='rgba(0,0,0,0)'
+            template="plotly_dark", 
+            paper_bgcolor='rgba(0,0,0,0)', # Transparent to show app background
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color="white")
         )
-        fig_line.update_traces(line=dict(width=4), marker=dict(size=10, line=dict(width=2, color='white')))
+        fig_line.update_traces(line=dict(width=4), marker=dict(size=10))
         st.plotly_chart(fig_line, use_container_width=True)
 
 # ================= RIGHT COLUMN: AI ANALYST =================
 with col_chat:
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-    # Header
     st.markdown("<h3>🤖 AI Executive Assistant</h3>", unsafe_allow_html=True)
-    st.markdown("<p>Ask questions about your sales data naturally.</p>", unsafe_allow_html=True)
 
-    # QUICK ACTION BUTTONS
+    # ACTION BUTTONS
     qa_c1, qa_c2, qa_c3 = st.columns(3)
     prompt_to_run = None
     
@@ -248,14 +223,14 @@ with col_chat:
     if qa_c3.button("📉 Low Growth", use_container_width=True):
         prompt_to_run = f"Which 5 products have the lowest Sales in {current_year}? Show in a table."
 
-    # AI Agent Setup
+    # AI SETUP
     if "messages" not in st.session_state: st.session_state.messages = []
     if "agent" not in st.session_state:
         llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
         prefix = f"""You are an expert Bikano Data Analyst. Dataset years: {min_year}-{max_year}. 'CY'={current_year}. Always provide Final Answer as nicely formatted Markdown Tables."""
         st.session_state.agent = create_pandas_dataframe_agent(llm, df, verbose=True, allow_dangerous_code=True, handle_parsing_errors=True, max_iterations=10, prefix=prefix)
 
-    # Chat History Display
+    # CHAT HISTORY
     chat_container = st.container(height=500)
     with chat_container:
         for i, msg in enumerate(st.session_state.messages):
@@ -267,8 +242,8 @@ with col_chat:
                 else:
                     st.markdown(msg["content"])
 
-    # Input handling
-    user_input = st.chat_input("Ex: 'Compare sales of Product A vs B'")
+    # INPUT
+    user_input = st.chat_input("Ask about sales, trends, or specific products...")
     
     final_prompt = prompt_to_run if prompt_to_run else user_input
 
@@ -287,7 +262,7 @@ with col_chat:
                         text_resp = resp['output']
                         st.markdown(text_resp)
                     except Exception as e:
-                        text_resp = f"Could not format data. Error: {e}"
+                        text_resp = f"Error: {e}"
                         st.error(text_resp)
 
                     need_chart = any(k in final_prompt.lower() for k in ["chart", "plot", "graph", "trend", "compare"])
