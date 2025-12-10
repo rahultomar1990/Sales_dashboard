@@ -20,25 +20,27 @@ st.markdown("""
         }
         div[data-testid="metric-container"] {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 242, 246, 0.8));
-            border: 1px solid #e0e0e0; padding: 10px; border-radius: 12px;
+            border: 1px solid #e0e0e0; padding: 15px; border-radius: 12px;
             border-left: 6px solid #6C63FF; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
         }
         div[data-testid="metric-container"]:hover {
             transform: translateY(-4px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-left: 6px solid #FF6584;
         }
         div[data-testid="stMetricValue"] {
-            font-size: 20px; font-weight: 700;
+            font-size: 24px; font-weight: 700;
             background: -webkit-linear-gradient(90deg, #0052cc, #00a3ff);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
+        /* Vertical divider between the two main columns */
         div[data-testid="column"]:nth-of-type(1) {
             border-right: 2px solid transparent;
             border-image: linear-gradient(to bottom, #f0f0f0 0%, #6C63FF 50%, #f0f0f0 100%);
-            border-image-slice: 1; padding-right: 25px;
+            border-image-slice: 1; padding-right: 15px;
         }
         @media (min-width: 768px) {
-            .stChatInput { position: fixed; bottom: 20px; width: 28% !important; z-index: 1000; border-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); }
+            .stChatInput { position: fixed; bottom: 20px; width: 48% !important; right: 20px; z-index: 1000; border-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); }
         }
         @media (max-width: 768px) {
             .stChatInput { position: fixed; bottom: 0px; left: 0px; width: 100% !important; z-index: 1000; border-radius: 0px; padding-bottom: 10px; background-color: white; }
@@ -139,44 +141,50 @@ ly_sales = df[df['Year'] == last_year]['Sales'].sum() if 'Year' in df.columns el
 yoy_growth = ((cy_sales - ly_sales) / ly_sales) * 100 if ly_sales > 0 else 0
 
 # --- 7. LAYOUT ---
-col_dash, col_chat = st.columns([2.5, 1.2], gap="medium")
+# REQUEST: Half page for left side and right side (50/50 split)
+col_dash, col_chat = st.columns([1, 1], gap="small")
 
 # LEFT COLUMN
 with col_dash:
-    st.title("Sales Data Analysis with AGENTIC AI ")
+    st.title("Sales Data Analysis")
     st.markdown("---")
     
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
-    m1.metric("💰 Total Sales", f"${df['Sales'].sum():,.0f}")
-    m2.metric(f"📅 CY {current_year}", f"${cy_sales:,.0f}")
-    m3.metric(f"⏮️ LY {last_year}", f"${ly_sales:,.0f}", delta=f"{cy_sales-ly_sales:,.0f}")
-    m4.metric("📈 YoY Growth", f"{yoy_growth:.2f}%", delta=f"{yoy_growth:.2f}%")
-    m5.metric("📦 Orders", f"{df['Order ID'].nunique() if 'Order ID' in df.columns else 0:,}")
-    m6.metric("🔢 Units", f"{df['Units'].sum() if 'Units' in df.columns else 0:,.0f}")
+    # REQUEST: Scorecards as Tiles. 
+    # We use a 3x2 Grid layout here to give them space to look like tiles.
+    row1_c1, row1_c2, row1_c3 = st.columns(3)
+    with row1_c1:
+        st.metric("💰 Total Sales", f"${df['Sales'].sum():,.0f}")
+    with row1_c2:
+        st.metric(f"📅 CY {current_year}", f"${cy_sales:,.0f}")
+    with row1_c3:
+        st.metric(f"⏮️ LY {last_year}", f"${ly_sales:,.0f}", delta=f"{cy_sales-ly_sales:,.0f}")
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True) # Spacer
+
+    row2_c1, row2_c2, row2_c3 = st.columns(3)
+    with row2_c1:
+        st.metric("📈 YoY Growth", f"{yoy_growth:.2f}%", delta=f"{yoy_growth:.2f}%")
+    with row2_c2:
+        st.metric("📦 Orders", f"{df['Order ID'].nunique() if 'Order ID' in df.columns else 0:,}")
+    with row2_c3:
+        st.metric("🔢 Units", f"{df['Units'].sum() if 'Units' in df.columns else 0:,.0f}")
     
     st.markdown("---")
     
-    c1, c2 = st.columns(2)
-    with c1:
-        if 'Year' in df.columns:
-            st.markdown(f"#### 📅 Sales Trend ({last_year} vs {current_year})")
-            trend_df = df[df['Year'].isin([current_year, last_year])]
-            monthly_sales = trend_df.groupby(['Month', 'Year'])['Sales'].sum().reset_index()
-            # Fixed Color
-            fig_bar = px.bar(monthly_sales, x='Month', y='Sales', color='Year', barmode='group', 
-                             text_auto='.2s', color_discrete_sequence=px.colors.qualitative.Bold)
-            fig_bar.update_layout(xaxis_title=None, yaxis_title=None, legend_title="Year", height=350, template="plotly_white")
-            st.plotly_chart(fig_bar, use_container_width=True)
-    with c2:
-        if 'Division' in df.columns:
-            st.markdown("#### 🏢 Sales by Division")
-            div_sales = df.groupby('Division')['Sales'].sum().reset_index()
-            # Fixed Color
-            fig_pie = px.pie(div_sales, values='Sales', names='Division', hole=0.5, 
-                             color_discrete_sequence=px.colors.qualitative.Bold)
-            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-            fig_pie.update_layout(height=350, template="plotly_white")
-            st.plotly_chart(fig_pie, use_container_width=True)
+    # REQUEST: Sales Trend as Line Chart & Remove Pie Chart
+    if 'Year' in df.columns:
+        st.markdown(f"#### 📅 Sales Trend ({last_year} vs {current_year})")
+        trend_df = df[df['Year'].isin([current_year, last_year])]
+        monthly_sales = trend_df.groupby(['Month', 'Year'])['Sales'].sum().reset_index()
+        
+        # Changed to Line Chart with Markers
+        fig_line = px.line(monthly_sales, x='Month', y='Sales', color='Year', 
+                           markers=True,
+                           color_discrete_sequence=px.colors.qualitative.Set1) # Beautiful Colors
+        
+        fig_line.update_layout(xaxis_title=None, yaxis_title="Revenue ($)", legend_title="Year", height=380, template="plotly_white")
+        fig_line.update_traces(line=dict(width=3), marker=dict(size=8))
+        st.plotly_chart(fig_line, use_container_width=True)
 
     with st.expander("📄 View Raw Data Snippet"):
         st.dataframe(df.head(10), use_container_width=True)
@@ -258,5 +266,3 @@ with col_chat:
                             st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
                         st.session_state.messages.append({"role": "assistant", "content": text_response})
-
-
