@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from langchain_groq import ChatGroq
 import os
+import sys
 
 # --- 1. PAGE SETUP & BRANDING ---
 st.set_page_config(layout="wide", page_title="Bikano Sales Intelligence", page_icon="📈")
@@ -100,6 +101,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. CONFIGURATION ---
+# Using the new SUPPORTED Instant model ID
 GROQ_API_KEY = "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"
 CACHE_FILE = "sales_data_cache.parquet"
 
@@ -136,17 +138,16 @@ if isinstance(data_result, str):
 else:
     df = data_result
 
-# --- 5. CORE AI ENGINE (No-Loop Direct Execution) ---
+# --- 5. CORE AI ENGINE (Direct Execution) ---
 def ask_ai(prompt, df):
     """
-    Directly converts a question to Pandas code and executes it.
-    This prevents 'Thinking' loops and is much faster.
+    Uses the supported Llama-3.1-8b-Instant model to generate code.
+    Executes it directly to avoid agent loops.
     """
     try:
-        # Use the Stable Llama 3 Model
-        llm = ChatGroq(temperature=0, model_name="llama3-8b-8192", api_key=GROQ_API_KEY)
+        # UPDATED: Using 'llama-3.1-8b-instant' which is the current supported ID
+        llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=GROQ_API_KEY)
         
-        # 1. Determine if we need a chart or just data
         code_prompt = f"""
         You are a Python Data Analyst. 
         DataFrame `df` has columns: {df.columns.tolist()}.
@@ -158,9 +159,14 @@ def ask_ai(prompt, df):
         3. If the user asks for a plot/chart/graph, create a Plotly Express figure named `fig`.
         4. Wrap code in ```python blocks.
         5. DO NOT print anything. Just assign `result` or `fig`.
+        6. IMPORT plotly.express as px inside the code if needed.
         
         Example:
-        result = df['Sales'].sum()
+        ```python
+        import plotly.express as px
+        result = "Sales for 2024 is " + str(df[df['Year']==2024]['Sales'].sum())
+        fig = px.bar(df, x='Month', y='Sales')
+        ```
         """
         
         response = llm.invoke(code_prompt)
@@ -173,7 +179,7 @@ def ask_ai(prompt, df):
         return local_vars.get('result', "No result found."), local_vars.get('fig', None)
         
     except Exception as e:
-        return f"Error processing query: {str(e)}", None
+        return f"Error: {str(e)}", None
 
 # --- 6. CALCULATIONS ---
 min_year = int(df['Year'].min()) if 'Year' in df.columns else 2020
@@ -263,7 +269,7 @@ with col_chat:
     chat_container = st.container(height=580)
     with chat_container:
         if not st.session_state.messages:
-            st.info(f"👋 Ready! I can analyze data instantly.")
+            st.info(f"👋 Ready! I'm using the fast Llama-3.1-Instant model.")
         
         for i, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"]):
