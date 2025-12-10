@@ -49,27 +49,42 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. CONFIGURATION ---
-# IMPORTANT: In a real app, use st.secrets for this key. For this demo, we keep it here.
+# NOTE: We use os.environ to avoid hardcoding keys if you use secrets, but hardcoding works for testing.
 GROQ_API_KEY = "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"
 CACHE_FILE = "sales_data_cache.parquet"
 
-# --- 4. DATA ENGINE (CLOUD ONLY) ---
+# --- 4. DATA ENGINE (CLOUD MODE: PARQUET ONLY) ---
 @st.cache_data(show_spinner=False)
 def get_data():
+    # Check if the uploaded file exists
     if os.path.exists(CACHE_FILE):
         try:
             df = pd.read_parquet(CACHE_FILE)
+            
+            # --- CRITICAL FIX: RE-APPLY DATA TYPES ---
+            # Parquet is great, but we re-force types to ensure the AI reads them correctly
+            if 'Order Date' in df.columns:
+                df['Order Date'] = pd.to_datetime(df['Order Date'], errors='coerce')
+                df['Year'] = df['Order Date'].dt.year
+                df['Month'] = df['Order Date'].dt.month_name()
+                
+            # Re-establish Month Ordering (Crucial for Charts)
             month_order = ['January', 'February', 'March', 'April', 'May', 'June', 
                            'July', 'August', 'September', 'October', 'November', 'December']
             if 'Month' in df.columns:
                 df['Month'] = pd.Categorical(df['Month'], categories=month_order, ordered=True)
+            
+            # Sort by Date so the AI understands timelines
+            df = df.sort_values(by='Order Date')
+            
             return df
         except Exception as e:
             return f"Error reading cache: {str(e)}"
     else:
-        return "⚠️ Data File Missing! Please upload 'sales_data_cache.parquet' to your GitHub repository."
+        return "⚠️ CRITICAL: 'sales_data_cache.parquet' not found! Please upload it to GitHub."
 
-with st.spinner("🚀 Loading Cloud Data..."):
+# --- LOAD DATA ---
+with st.spinner("🚀 Loading Data from Cloud Cache..."):
     data_result = get_data()
 
 if isinstance(data_result, str):
@@ -78,22 +93,29 @@ if isinstance(data_result, str):
 else:
     df = data_result
 
-# --- 5. CHART ENGINE ---
+# --- 5. INTELLIGENT CHART ENGINE ---
 def generate_chart(prompt, df):
     try:
-        chart_llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
+        chart_llm = ChatGroq(
+            temperature=0, 
+            model_name="llama-3.3-70b-versatile", 
+            api_key=GROQ_API_KEY
+        )
+        
         code_prompt = f"""
         You are a Python Data Visualization Expert using Plotly Express.
         The user wants a visual based on this dataframe: {df.columns.tolist()}
         User Query: "{prompt}"
+        
         INSTRUCTIONS:
         1. INTELLIGENTLY CHOOSE CHART TYPE (Bar, Line, Pie).
         2. **MANDATORY COLOR RULE**: 
            - For Bar Charts, you MUST set `color` to the same column as `x`. 
              Example: `px.bar(df, x='City', y='Sales', color='City', ...)`
+           - This ensures every bar has a different color.
         3. **STYLE**:
            - Use `template='plotly_white'`.
-           - Set `color_discrete_sequence=px.colors.qualitative.Vivid`.
+           - Set `color_discrete_sequence=px.colors.qualitative.Bold`.
         4. OUTPUT: 
            - Write ONLY the raw Python code to create a figure named 'fig'. 
            - Do NOT include markdown ticks.
@@ -107,7 +129,7 @@ def generate_chart(prompt, df):
     except Exception as e:
         return None
 
-# --- 6. CALCULATIONS & LAYOUT ---
+# --- 6. CALCULATIONS ---
 min_year = int(df['Year'].min()) if 'Year' in df.columns else 2020
 max_year = int(df['Year'].max()) if 'Year' in df.columns else 2024
 current_year = max_year
@@ -116,12 +138,14 @@ cy_sales = df[df['Year'] == current_year]['Sales'].sum() if 'Year' in df.columns
 ly_sales = df[df['Year'] == last_year]['Sales'].sum() if 'Year' in df.columns else 0
 yoy_growth = ((cy_sales - ly_sales) / ly_sales) * 100 if ly_sales > 0 else 0
 
+# --- 7. LAYOUT ---
 col_dash, col_chat = st.columns([2.5, 1.2], gap="medium")
 
 # LEFT COLUMN
 with col_dash:
     st.title("Sales Data Analysis with AI Assistant")
     st.markdown("---")
+    
     m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric("💰 Total Sales", f"${df['Sales'].sum():,.0f}")
     m2.metric(f"📅 CY {current_year}", f"${cy_sales:,.0f}")
@@ -131,12 +155,14 @@ with col_dash:
     m6.metric("🔢 Units", f"{df['Units'].sum() if 'Units' in df.columns else 0:,.0f}")
     
     st.markdown("---")
+    
     c1, c2 = st.columns(2)
     with c1:
         if 'Year' in df.columns:
             st.markdown(f"#### 📅 Sales Trend ({last_year} vs {current_year})")
             trend_df = df[df['Year'].isin([current_year, last_year])]
             monthly_sales = trend_df.groupby(['Month', 'Year'])['Sales'].sum().reset_index()
+            # Fixed Color
             fig_bar = px.bar(monthly_sales, x='Month', y='Sales', color='Year', barmode='group', 
                              text_auto='.2s', color_discrete_sequence=px.colors.qualitative.Bold)
             fig_bar.update_layout(xaxis_title=None, yaxis_title=None, legend_title="Year", height=350, template="plotly_white")
@@ -145,6 +171,7 @@ with col_dash:
         if 'Division' in df.columns:
             st.markdown("#### 🏢 Sales by Division")
             div_sales = df.groupby('Division')['Sales'].sum().reset_index()
+            # Fixed Color
             fig_pie = px.pie(div_sales, values='Sales', names='Division', hole=0.5, 
                              color_discrete_sequence=px.colors.qualitative.Bold)
             fig_pie.update_traces(textposition='inside', textinfo='percent+label')
@@ -158,46 +185,76 @@ with col_dash:
 with col_chat:
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     st.subheader("🤖 AI Data Analyst (Groq)")
+    st.info("Ask: 'Show me top 5 cities/product/year by sales'")
+
     if "messages" not in st.session_state: st.session_state.messages = []
     
     if "agent" not in st.session_state:
-        llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
-        prefix = f"Data: {min_year}-{max_year}. CY={current_year}, LY={last_year}. Output: Markdown Table."
+        llm = ChatGroq(
+            temperature=0, 
+            model_name="llama-3.3-70b-versatile", 
+            api_key=GROQ_API_KEY
+        )
+        
+        prefix_instructions = f"""
+        You are an expert Data Analyst using Pandas.
+        - **IMPORTANT**: The dataset contains data from year {min_year} to {max_year}. 
+        - Do NOT rely on df.head() to verify date ranges. Trust that {max_year} exists.
+        - 'CY' means {current_year}, 'LY' means {last_year}.
+        - Always provide Final Answer as a Markdown Table.
+        """
+        
         st.session_state.agent = create_pandas_dataframe_agent(
-            llm, df, verbose=True, allow_dangerous_code=True, handle_parsing_errors=True, max_iterations=10, prefix=prefix
+            llm, 
+            df, 
+            verbose=True, 
+            allow_dangerous_code=True, 
+            handle_parsing_errors=True, 
+            max_iterations=10, 
+            prefix=prefix_instructions
         )
 
+    # Chat History
     chat_container = st.container(height=580)
     with chat_container:
         for i, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"]):
                 if isinstance(msg["content"], dict):
-                    st.markdown(msg["content"]["text"])
-                    with st.expander("📊 View Chart", expanded=True):
-                        st.plotly_chart(msg["content"]["chart"], use_container_width=True, key=f"chart_{i}")
+                    if "text" in msg["content"]: st.markdown(msg["content"]["text"])
+                    if "chart" in msg["content"]: 
+                        with st.expander("📊 View Chart", expanded=True):
+                            st.plotly_chart(msg["content"]["chart"], use_container_width=True, key=f"chart_{i}")
                 else:
                     st.markdown(msg["content"])
 
     if prompt := st.chat_input("Ask: 'Top 5 cities sales'"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with chat_container:
-            with st.chat_message("user"): st.markdown(prompt)
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
             with st.chat_message("assistant"):
-                with st.spinner("Analyzing..."):
+                with st.spinner("Analyzing (Fast Llama 3)..."):
+                    text_response = ""
                     try:
-                        resp = st.session_state.agent.invoke(prompt)
-                        ans = resp['output']
-                        st.markdown(ans)
-                        
-                        if any(k in prompt.lower() for k in ["chart", "plot", "graph", "pie", "bar"]):
-                            fig = generate_chart(prompt, df)
-                            if fig:
-                                st.session_state.messages.append({"role": "assistant", "content": {"text": ans, "chart": fig}})
-                                with st.expander("📊 View Chart", expanded=True):
-                                    st.plotly_chart(fig, use_container_width=True, key=f"new_{len(st.session_state.messages)}")
-                            else:
-                                st.session_state.messages.append({"role": "assistant", "content": ans})
-                        else:
-                            st.session_state.messages.append({"role": "assistant", "content": ans})
+                        style_rules = "\nIMPORTANT: Format numbers with commas. Use Markdown Tables. Start response with 'Final Answer:'."
+                        resp_obj = st.session_state.agent.invoke(prompt + style_rules)
+                        text_response = resp_obj['output']
+                        st.markdown(text_response)
                     except Exception as e:
-                        st.error(str(e))
+                        text_response = "Found data but formatting failed. Please try again."
+                        st.error(f"Error: {e}")
+
+                    explicit_chart = any(k in prompt.lower() for k in ["chart", "plot", "graph", "pie", "bar"])
+                    implicit_data = any(k in prompt.lower() for k in ["sales", "sale", "growth", "orders", "top", "trend", "wise", "year", "month", "division"])
+                    
+                    fig = None
+                    if (explicit_chart or implicit_data) and "Error" not in text_response:
+                        fig = generate_chart(prompt, df)
+                    
+                    if fig:
+                        st.session_state.messages.append({"role": "assistant", "content": {"text": text_response, "chart": fig, "is_explicit": True}})
+                        with st.expander("📊 View Chart", expanded=True):
+                            st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
+                    else:
+                        st.session_state.messages.append({"role": "assistant", "content": text_response})
