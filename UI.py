@@ -8,78 +8,88 @@ import os
 # --- 1. PAGE SETUP & BRANDING ---
 st.set_page_config(layout="wide", page_title="Bikano Sales Intelligence", page_icon="📈")
 
-# UPDATE: Using the exact filename you provided
+# Using the exact filename you provided
 LOGO_PATH = "Bikano new logo.jpg"
 try:
     st.logo(LOGO_PATH, icon_image=LOGO_PATH)
 except Exception:
     pass 
 
-# --- 2. PROFESSIONAL DARK MODE CSS ---
+# --- 2. COMPACT DARK MODE CSS ---
 st.markdown("""
     <style>
-        /* MAIN BACKGROUND - Clean Dark Mode */
+        /* 1. REMOVE TOP WHITESPACE & MAXIMIZE SCREEN USE */
+        .block-container {
+            padding-top: 1rem !important; /* Move content up */
+            padding-bottom: 0rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+            max-width: 100% !important;
+        }
+        
+        /* 2. MAIN BACKGROUND - Clean Dark Mode */
         .stApp {
             background-color: #0E1117;
             color: #FAFAFA;
         }
         
-        /* SIDEBAR - Darker Shade */
+        /* 3. SIDEBAR - Darker Shade */
         [data-testid="stSidebar"] {
             background-color: #262730;
             border-right: 1px solid #333;
         }
 
-        /* HEADERS */
-        h1, h2, h3 { 
+        /* 4. HEADERS - Compact margins */
+        h1 { 
             color: #FFFFFF !important;
             font-family: 'Segoe UI', sans-serif;
             font-weight: 700;
+            font-size: 2rem !important; /* Slightly smaller title */
+            margin-bottom: 0px !important;
+            padding-bottom: 10px !important;
+        }
+        h3 {
+            margin-top: 0px !important;
+            padding-top: 0px !important;
         }
         
-        /* METRIC CARDS - Dark Surface with Bikano Red Accent */
+        /* 5. METRIC CARDS - Dark Surface with Bikano Red Accent */
         div[data-testid="metric-container"] {
             background-color: #1E1E1E;
             border: 1px solid #333;
-            padding: 15px !important;
-            border-radius: 10px;
+            padding: 10px !important; /* Compact Padding */
+            border-radius: 8px;
             border-left: 5px solid #D32F2F; /* BIKANO RED */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            min-height: 80px; /* Force consistent height */
         }
         
         /* METRIC TEXT - High Contrast */
         div[data-testid="stMetricLabel"] {
-            color: #B0B0B0 !important; /* Light Grey for label */
-            font-size: 14px;
+            color: #B0B0B0 !important;
+            font-size: 13px !important;
         }
         div[data-testid="stMetricValue"] {
-            color: #FFCA28 !important; /* BIKANO YELLOW for numbers */
-            font-size: 26px !important;
+            color: #FFCA28 !important; /* BIKANO YELLOW */
+            font-size: 22px !important;
             font-weight: 700 !important;
         }
-        div[data-testid="stMetricDelta"] {
-            color: #4CAF50 !important; /* Bright Green for growth */
-        }
 
-        /* CUSTOM BUTTONS - Bikano Gradient */
+        /* 6. CUSTOM BUTTONS */
         .stButton button {
-            background: linear-gradient(45deg, #D32F2F, #B71C1C); /* Red Gradient */
+            background: linear-gradient(45deg, #D32F2F, #B71C1C);
             color: white;
             border: none;
             border-radius: 8px;
-            font-weight: 600;
-        }
-        .stButton button:hover {
-            background: linear-gradient(45deg, #B71C1C, #D32F2F);
-            border: 1px solid #FFCA28; /* Yellow border on hover */
+            height: 40px;
         }
 
-        /* CHAT INPUT */
+        /* 7. CHAT INPUT - Fixed at bottom */
         .stChatInput {
             border-radius: 20px !important;
         }
         
-        /* CHART BACKGROUND */
+        /* 8. CHART BACKGROUND TRANSPARENCY */
         .js-plotly-plot .plotly .main-svg {
             background: rgba(0,0,0,0) !important;
         }
@@ -123,7 +133,7 @@ if isinstance(data_result, str):
 else:
     df = data_result
 
-# --- 5. CHART ENGINE (UPDATED FOR DARK MODE) ---
+# --- 5. CHART ENGINE ---
 def generate_chart(prompt, df):
     try:
         chart_llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
@@ -158,58 +168,70 @@ orders_count = df['Order ID'].nunique() if 'Order ID' in df.columns else 0
 units_count = df['Units'].sum() if 'Units' in df.columns else 0
 
 # --- 7. MAIN LAYOUT (50/50 Split) ---
-col_dash, col_chat = st.columns([1, 1], gap="large")
+col_dash, col_chat = st.columns([1, 1], gap="small") # Gap small to save space
 
 # ================= LEFT COLUMN: DASHBOARD =================
 with col_dash:
     # Header
     st.markdown(f"<h1>Bikano Sales Intelligence <span style='font-size:1.2rem; color:#FFCA28'>| FY {current_year}</span></h1>", unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("<hr style='margin-top: 5px; margin-bottom: 10px; border-color: #444;'>", unsafe_allow_html=True)
     
-    # METRIC TILES
+    # METRIC TILES (Compact)
     row1_c1, row1_c2, row1_c3 = st.columns(3)
     with row1_c1: st.metric("Total Revenue", f"${df['Sales'].sum():,.0f}")
     with row1_c2: st.metric(f"CY {current_year} Sales", f"${cy_sales:,.0f}")
     with row1_c3: st.metric(f"LY {last_year} Sales", f"${ly_sales:,.0f}", delta=f"${cy_sales-ly_sales:,.0f}")
 
-    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True) # Spacer
-
+    # No spacer div needed to keep it compact
+    
     row2_c1, row2_c2, row2_c3 = st.columns(3)
     with row2_c1: st.metric("YoY Growth", f"{yoy_growth:.2f}%", delta=f"{yoy_growth:.2f}%")
     with row2_c2: st.metric("Total Orders", f"{orders_count:,}")
     with row2_c3: st.metric("Units Sold", f"{units_count:,.0f}")
     
-    st.markdown("---")
+    st.markdown("<hr style='margin-top: 10px; margin-bottom: 5px; border-color: #444;'>", unsafe_allow_html=True)
     
-    # TREND CHART (Dark Mode Optimized)
+    # TREND CHART (Compact & With Data Labels)
     if 'Year' in df.columns:
-        st.subheader(f"📅 Sales Trend ({last_year} vs {current_year})")
+        st.markdown(f"### 📅 Sales Trend ({last_year} vs {current_year})")
         trend_df = df[df['Year'].isin([current_year, last_year])]
         monthly_sales = trend_df.groupby(['Month', 'Year'])['Sales'].sum().reset_index()
         
-        # Bikano Colors: Yellow & Red (Brightened for Dark Mode)
+        # Bikano Colors: Yellow & Red
         custom_colors = ['#FFD600', '#FF5252'] 
         
-        fig_line = px.line(monthly_sales, x='Month', y='Sales', color='Year', markers=True,
+        # ADDED: text='Sales' for Data Labels
+        fig_line = px.line(monthly_sales, x='Month', y='Sales', color='Year', 
+                           markers=True,
+                           text='Sales',  # <--- SHOW DATA LEVELS
                            color_discrete_sequence=custom_colors)
         
-        # KEY CHANGE: template='plotly_dark' for dark background integration
         fig_line.update_layout(
             xaxis_title=None, 
-            yaxis_title="Revenue ($)", 
-            legend_title="Fiscal Year", 
-            height=400, 
+            yaxis_title=None, 
+            legend_title=None, 
+            height=320,  # <--- REDUCED HEIGHT TO FIT PAGE
             template="plotly_dark", 
-            paper_bgcolor='rgba(0,0,0,0)', # Transparent to show app background
+            paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color="white")
+            font=dict(color="white"),
+            margin=dict(l=0, r=0, t=20, b=0), # Compact Margins
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
-        fig_line.update_traces(line=dict(width=4), marker=dict(size=10))
+        
+        # Format Data Labels (e.g., 20k)
+        fig_line.update_traces(
+            line=dict(width=3), 
+            marker=dict(size=8),
+            texttemplate='%{y:.2s}', # Format numbers (e.g., 18k)
+            textposition='top center'
+        )
         st.plotly_chart(fig_line, use_container_width=True)
 
 # ================= RIGHT COLUMN: AI ANALYST =================
 with col_chat:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    # Small Spacer to align with Title
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     st.markdown("<h3>🤖 AI Executive Assistant</h3>", unsafe_allow_html=True)
 
     # ACTION BUTTONS
@@ -231,7 +253,8 @@ with col_chat:
         st.session_state.agent = create_pandas_dataframe_agent(llm, df, verbose=True, allow_dangerous_code=True, handle_parsing_errors=True, max_iterations=10, prefix=prefix)
 
     # CHAT HISTORY
-    chat_container = st.container(height=500)
+    # Reduced container height slightly to prevent page scroll
+    chat_container = st.container(height=450)
     with chat_container:
         for i, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"]):
@@ -243,7 +266,7 @@ with col_chat:
                     st.markdown(msg["content"])
 
     # INPUT
-    user_input = st.chat_input("Ask about sales, trends, or specific products...")
+    user_input = st.chat_input("Ask about sales...")
     
     final_prompt = prompt_to_run if prompt_to_run else user_input
 
