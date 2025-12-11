@@ -151,7 +151,7 @@ col_dash, col_chat = st.columns([2.5, 1.2], gap="medium")
 
 # LEFT COLUMN
 with col_dash:
-    st.title("Sales Data Analysis with AI (Chat with Data)")
+    st.title("Conversational Analytics (Chat with Data)")
     st.markdown("---")
     
     m1, m2, m3, m4, m5, m6 = st.columns(6)
@@ -205,7 +205,7 @@ with col_chat:
         )
         
         prefix_instructions = f"""
-        You are an expert Data Analyst using Pandas.
+        You are an expert Data Analyst along with visualization using Pandas with 30 years of experience.
         - **IMPORTANT**: The dataset contains data from year {min_year} to {max_year}. 
         - Do NOT rely on df.head() to verify date ranges. Trust that {max_year} exists.
         - 'CY' means {current_year}, 'LY' means {last_year}.
@@ -266,3 +266,4 @@ with col_chat:
                             st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
                         st.session_state.messages.append({"role": "assistant", "content": text_response})
+
