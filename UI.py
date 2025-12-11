@@ -175,44 +175,19 @@ with col_dash:
                              text_auto='.2s', color_discrete_sequence=px.colors.qualitative.Bold)
             fig_bar.update_layout(xaxis_title=None, yaxis_title=None, legend_title="Year", height=350, template="plotly_white")
             st.plotly_chart(fig_bar, use_container_width=True)
-    with ch2:
-        # Check if we have necessary columns
-        if 'Order Date' in df.columns and 'Year' in df.columns:
-            st.markdown("#### 📊 Quarterly Sales (2023 vs 2024)")
-            
-            # 1. Filter Data for 2023 & 2024
-            qtd_df = df[df['Year'].isin([2023, 2024])].copy()
-            
-            # 2. Extract Quarter (Q1, Q2, Q3, Q4)
-            # We use string formatting to get "Q1", "Q2", etc.
-            qtd_df['Quarter'] = "Q" + qtd_df['Order Date'].dt.quarter.astype(str)
-            
-            # 3. Group by Quarter and Year
-            q_sales = qtd_df.groupby(['Quarter', 'Year'])['Sales'].sum().reset_index()
-            
-            # 4. Create Grouped Bar Chart
-            fig_qtd = px.bar(
-                q_sales, 
-                x='Quarter', 
-                y='Sales', 
-                color='Year', 
-                barmode='group', # Makes them side-by-side
-                text_auto='.2s', # Adds data labels (e.g. 1.2M)
-                color_discrete_sequence=px.colors.qualitative.Bold,
-                template="plotly_dark"
-            )
-            
-            # 5. Layout Styling to match your theme
-            fig_qtd.update_layout(
-                xaxis_title=None, 
-                yaxis_title=None, 
-                legend_title=None,
-                height=300, 
-                margin=dict(l=0, r=0, t=0, b=0),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            
-            st.plotly_chart(fig_qtd, use_container_width=True)
+    with c2:
+        if 'Division' in df.columns:
+            st.markdown("#### 🏢 Sales by Division")
+            div_sales = df.groupby('Division')['Sales'].sum().reset_index()
+            # Fixed Color
+            fig_pie = px.pie(div_sales, values='Sales', names='Division', hole=0.5, 
+                             color_discrete_sequence=px.colors.qualitative.Bold)
+            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+            fig_pie.update_layout(height=350, template="plotly_white")
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+    with st.expander("📄 View Raw Data Snippet"):
+        st.dataframe(df.head(10), use_container_width=True)
 
 # RIGHT COLUMN
 with col_chat:
@@ -291,5 +266,3 @@ with col_chat:
                             st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
                         st.session_state.messages.append({"role": "assistant", "content": text_response})
-
-
