@@ -50,7 +50,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. CONFIGURATION ---
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "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"
 CACHE_FILE = "sales_data_cache.parquet"
 
 # --- 4. CLOUD DATA ENGINE (PARQUET ONLY) ---
@@ -266,3 +266,4 @@ with col_chat:
                             st.plotly_chart(fig, use_container_width=True, key=f"chart_new_{len(st.session_state.messages)}")
                     else:
                         st.session_state.messages.append({"role": "assistant", "content": text_response})
+
